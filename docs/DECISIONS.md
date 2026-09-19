@@ -69,3 +69,14 @@ Rejected alternative: patch the overlay to channel 2 and keep GPIO18 — a local
 and maintain, which a firmware update can supersede without warning. One jumper is cheaper.
 Revisit when: the pin is needed for something else, or an upstream overlay gains a channel param.
 
+## D10 — Measure IR reliability with VOL±, never by counting mute toggles
+Context: mute has no on-screen number, its icon is brief, and on quiet content a toggle is
+inaudible. Two measurements of the same emitter at the same distance disagreed 10/10 vs 5/20
+purely because of the instrument (TROUBLESHOOTING T12).
+Decision: all hit-rate and range measurements use N × VOL+ (or VOL−) and the volume delta.
+Mute gets a single press to confirm it works, and nothing more.
+Consequences: the definition of done still counts mute toggles (BRINGUP §9), so treat a failing
+score as suspect until VOL± from the same position agrees with it.
+Revisit when: a receiver is on the bench and can count our own frames directly, which beats
+both instruments.
+

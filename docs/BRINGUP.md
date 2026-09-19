@@ -115,4 +115,7 @@ Log the result below and commit.
 | date | TV (brand/model) | code | frames | 20-run score | `real` time | notes |
 |------|------------------|------|--------|--------------|-------------|-------|
 | 2026-09-19 | LG 65UQ7570PUJ | `nec:0x0409` | 1 | not yet run | 0.102 s | First contact after moving the LED from GPIO18 (pin 12) to GPIO12 (pin 32) — T11. VOL+/VOL−/MUTE all confirmed at 20–30 cm, single MUTE press showed the icon. 20-run score and range envelope still to do. |
+| 2026-09-19 | LG 65UQ7570PUJ | `nec:0x0409` | 1 | 7/20, 8/20 @ 20–30 cm; 2/10 @ 3 in | 0.102 s | **Faulty KY-005.** Missing at 3 inches ruled out range; module swap fixed it (T12a). |
+| 2026-09-19 | LG 65UQ7570PUJ | `nec:0x0402/3` | 1 | 10/10 @ 3 in · 10/10 @ 1 m · ~5/10 @ 5 m | — | Second KY-005, measured with the volume instrument (T12b). This is the real range envelope. |
+| 2026-09-19 | LG 65UQ7570PUJ | `nec:0x0409` | 1 | 5/20 @ 1 m · 3/6 @ 2 m | — | Mute-toggle counts, same emitter and distance as the 10/10 above. Instrument disagreement unresolved — see D10. DoD #1/#2 NOT passed. |
 

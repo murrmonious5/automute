@@ -167,3 +167,38 @@ recompile and maintain a local `.dtbo` that a firmware update can silently super
 Note `ir-ctl`'s own warning: "most lirc settings have global state." Carrier and duty cycle
 persist on the device between invocations, so set `-c 38000 -D 50` explicitly when in doubt.
 
+## T12. Sends land only ~25–40 % of the time, at any distance
+Two separate causes bit us on 2026-09-19, in this order. Check both before blaming timing,
+the kernel, or the code.
+
+### a) The KY-005 module itself can be bad
+Symptom: 7/20 and 8/20 at 20–30 cm, and **2/10 at 3 inches**. A bare LED at three inches is
+absurdly over-powered for the job — if it misses there, it is not a range problem and no
+transistor driver will save it. Swapping in a second KY-005 took the same test to **10/10**.
+The LED still *lit* on the DC test (T4/T11), so "the LED works" is not the same as "the LED
+transmits a clean frame". Keep a spare module; they are ~$2 and apparently not all equal.
+
+### b) Counting mute toggles is a bad instrument — use VOL± instead
+Mute has no number on screen, the icon is small and brief, and on quiet content a toggle is
+inaudible. Volume counts itself: send N × VOL+, read the number before and after, and the delta
+is the exact hit count. Same emitter, same metre, minutes apart:
+
+| Test | Instrument | Result |
+|------|------------|--------|
+| 10 × `nec:0x0403` | volume delta (objective) | **10/10** |
+| 20 × `mute.py`    | counting toggles by eye/ear | **5/20** |
+
+Always measure reliability with VOL±. Only confirm mute works at all with a single press, per
+BRINGUP step 7. A mute press that lands while the TV is already muted, after the icon has faded,
+is indistinguishable from a miss.
+
+### Range curve measured with the volume instrument (new KY-005, GPIO12, bare LED ~10 mA)
+| Distance | Hits |
+|----------|------|
+| 3 in | 10/10 |
+| 1 m  | 10/10 |
+| 5 m  | ~5/10 |
+
+Reliable at the phase-1 metre; roughly half by 5 m. Exactly the envelope D5 predicted. A box that
+lives next to the TV is fine on a bare LED; anywhere else needs the driver transistor.
+

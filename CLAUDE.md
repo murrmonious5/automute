@@ -14,6 +14,7 @@ will call the same `mute()` function.
 | Something doesn't work | `docs/TROUBLESHOOTING.md` |
 | Why we chose X over Y | `docs/DECISIONS.md` |
 | What's out of scope and what later phases look like | `docs/ROADMAP.md`, `NOTES.md` |
+| What to buy next and what not to | `docs/SHOPPING.md` |
 
 Slash commands: `/bringup-status` (read-only health check), `/find-code <brand> [model]`,
 `/test-mute` (definition-of-done run), `/park <idea>` (append to NOTES.md).

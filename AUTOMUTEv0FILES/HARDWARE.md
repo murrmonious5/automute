@@ -84,12 +84,24 @@ setup that isn't.
   `nec:0x0402` VOL+ · `nec:0x0403` VOL− · `nec:0x0409` MUTE (single press, mute icon shown).
   The published LG NEC device-4 table was right from the start; the emitter was the problem.
 - `python3 mute.py`: 0.102 s (`real`, second run) — definition of done #3 passes.
-- **Still open:** the 20-run score (DoD #1/#2) has not been run on the working setup, and the
-  range envelope — the distance and angle where the TV stops responding — is still unmeasured.
-  That number decides whether phase 2 needs the transistor driver (NOTES.md).
+- **The first KY-005 was faulty.** It lit fine on the DC test but dropped most frames: 7/20 and
+  8/20 at 20–30 cm, and 2/10 at *three inches* — far too close for range to explain. A second
+  KY-005 took the same test to 10/10. Keep the good one; bin or label the bad one.
+  (TROUBLESHOOTING T12a. "The LED lights" ≠ "the LED transmits a clean frame".)
+- **Range envelope, measured with the volume instrument** (second module, bare LED ~10 mA):
+  **10/10 at 3 in · 10/10 at 1 m · ~5/10 at 5 m.** Reliable at the phase-1 metre, about half by
+  5 m — exactly what D5 predicted. A box beside the TV is fine; anywhere else wants the
+  transistor driver (docs/SHOPPING.md item 1).
+- **Still open — DoD #1/#2 NOT passed, and the reason is unresolved.** Counting mute toggles gave
+  5/20 at 1 m and 3/6 at 2 m, while VOL± from the same spot gave 10/10. Mute is a bad instrument
+  (T12b, D10), but we never ran the back-to-back that would prove it: 10 × VOL+ then 10 × MUTE
+  from an identical position, no moving in between. **That is the first test next session** — it
+  decides whether phase 1 is actually done or the emitter has a mute-specific problem.
+- Angle was never characterised, only distance. The cone is ~±20°; worth one sweep.
 
-Next session, in order: reboot → `pinctrl get 12` = PWM0_CHAN0 → strobe check (T11) → VOL+ →
-20 runs of `mute.py` at 3 s gaps, need ≥ 18 → fill in the results log in BRINGUP.md → measure range.
+Next session, in order: reboot → `pinctrl get 12` must read `a0 // GPIO12 = PWM0_CHAN0` (adjust
+`func=` if the Pi 5 firmware translates it differently) → strobe check (T11) → VOL+ sanity →
+the back-to-back VOL vs MUTE test above → 20 runs of `mute.py`, need ≥ 18 → results log.
 
 ### Bench B — (buddy)
 
