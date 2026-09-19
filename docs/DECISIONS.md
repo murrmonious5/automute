@@ -1,0 +1,57 @@
+# Decisions
+
+Short records of the choices that shape the code. Format: context → decision → consequences → revisit when.
+
+## D1 — The kernel makes the IR signal, not Python
+Context: IR needs a 38 kHz carrier and pulse edges accurate to ~100 µs. User space on Linux can't promise
+that, and on the Pi 5 every GPIO write crosses PCIe to the RP1 chip, adding latency and jitter.
+Decision: use rc-core (`/dev/lirc0`) and let a kernel driver own the timing.
+Consequences: one config.txt line, one reboot, and `ir-ctl` does the rest. No IR libraries in Python.
+Revisit when: never, for IR.
+
+## D2 — `pwm-ir-tx`, not `gpio-ir-tx`
+Context: `gpio-ir-tx` bit-bangs the carrier from a kernel thread; users report it failing outright on
+newer boards and it burns CPU. `pwm-ir-tx` lets hardware PWM make the carrier and only gates it; since
+Linux 6.8 it drives edges from an hrtimer (backported to Raspberry Pi's 6.6 kernels).
+Decision: `dtoverlay=pwm-ir-tx,gpio_pin=18`.
+Consequences: ties us to a PWM-capable pin (GPIO18). Open question on Pi 5: whether the RP1 PWM driver
+can be used from atomic context; dmesg says ("TX will not be accurate as PWM device might sleep" = the
+driver fell back to its sleeping path). NEC-family protocols are tolerant either way.
+Revisit when: sends are flaky with good aim — check kernel version and dmesg before anything else.
+
+## D3 — `ir-ctl` CLI, not LIRC ioctls from Python
+Context: `ir-ctl` already encodes every protocol we care about and sets the carrier per protocol.
+Decision: `mute()` shells out. ~10 ms of process overhead is nothing next to a 67 ms NEC frame.
+Consequences: `v4l-utils` is a runtime dependency. Budget ≈ 40 ms Python + 10 ms ir-ctl + 70 ms frame.
+Revisit when: a long-running daemon (phase 4) wants to avoid fork cost — it can still call `ir-ctl`.
+
+## D4 — Look codes up; don't record them (yet)
+Context: the KY-005 has no receiver, so we can't capture the real remote.
+Decision: brand → table / irdb / LIRC db → convert to Linux scancode (IR-CODES §1) → VOL+ then MUTE.
+Consequences: care needed converting web hex; some brands (Panasonic) need raw frames.
+Revisit when: two well-sourced candidates fail → buy a receiver (TSOP38238 / Adafruit 5990) and record.
+
+## D5 — Bare LED + resistor tonight; driver transistor later
+Context: ~10 mA from a 3.3 V GPIO ≈ 1 m of range. A transistor from 5 V gives 5–10× the current.
+Decision: accept 1 m and an 18/20 bar for phase 1. The resistor is non-negotiable.
+Consequences: aim and distance matter during tests; misses at 1 m are hardware findings.
+Revisit when: the box has to live anywhere but right next to the TV.
+
+## D6 — `mute()` is exactly one key press, and it's a toggle
+Context: TVs expose MUTE over IR as a toggle. A "retry" un-mutes. A missed frame means the box's belief
+about the TV's state is wrong.
+Decision: one frame per call (three for Sony, which is one press by that protocol's rules). No retries.
+No state tracking in phase 1.
+Consequences: phase 1 cannot know whether the TV is muted. That's phase 5 (mic level / HDMI-CEC status).
+Revisit when: phase 5.
+
+## D7 — IR first; HDMI-CEC and network APIs later
+Context: CEC and TV network APIs are stateful (set mute, read status) and need no line of sight — better
+long term. But they're per-brand, need pairing, and CEC needs the Pi on an HDMI input.
+Decision: IR is the universal fallback and the fastest path to a working demo.
+Consequences: keep `mute()` the only entry point so the backend can be swapped underneath it.
+Revisit when: phase 5/6.
+
+## D8 — Phase gating
+Decision: nothing beyond phase 1 gets built tonight. Ideas go to NOTES.md via `/park`.
+Revisit when: the definition of done is met and committed.
