@@ -63,3 +63,18 @@ after boot loads caches → time the second run.
 ## T9. Worked yesterday, not today
 Kernel update → `/bringup-status`. Pi under-voltage in dmesg. TV in a standby/eco state that ignores IR
 until a real remote wakes it. `/dev/lirc0` renumbered because a new rc device appeared (T2).
+
+## T10. `sudo dtoverlay -r pwm-ir-tx` segfaults and wedges IR until reboot
+Don't run it. On the Pi 5 (kernel 6.12.20+rpt-rpi-2712) removing the overlay at runtime
+null-derefs in the RP1 PWM driver's teardown:
+```
+Unable to handle kernel NULL pointer dereference
+pc : rp1_pwm_remove+0x1c/0x48
+  of_overlay_remove / configfs_rmdir
+```
+Aftermath: `/dev/lirc0` and `rc2` disappear, `dtoverlay -l` still lists the overlay, and the
+next `dtoverlay` call blocks forever in **D state** (unkillable — it holds a configfs lock).
+Only a reboot clears it. The rest of the system is unaffected.
+
+Adding the overlay at runtime is fine; only removal is broken. To change `gpio_pin=`, edit
+`/boot/firmware/config.txt` and reboot rather than reloading live.

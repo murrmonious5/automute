@@ -52,10 +52,13 @@ Verified:
 - Pi 5 has no analog audio jack, so the old "PWM audio fights `pwm-ir-tx`" advice doesn't apply.
   Still make sure nothing else claims GPIO18 (`dtoverlay=pwm`, `i2s`, HATs).
 
-To test, not assume (ground rule: say so, then test):
-- Whether this kernel's RP1 PWM driver lets `pwm-ir-tx` use its precise hrtimer path.
-  `dmesg` answers it — BRINGUP §3.
-- Exact `pinctrl` labels for the PWM alt function on GPIO18.
+Answered on bench (kernel 6.12.20+rpt-rpi-2712, 2026-09-18):
+- `pinctrl get 18` reports `a3 pd | lo // GPIO18 = PWM0_CHAN2` when the overlay is live.
+- This kernel does **not** give `pwm-ir-tx` its precise hrtimer path. dmesg says
+  `TX will not be accurate as PWM device might sleep` — the sleeping fallback. NEC tolerates
+  it; suspect it first if sends are flaky (TROUBLESHOOTING T6).
+- The overlay can be applied at runtime (`sudo dtoverlay pwm-ir-tx gpio_pin=18`) without a
+  reboot. It can **not** be removed at runtime — see TROUBLESHOOTING T10.
 
 ## Parked hardware ideas
 See NOTES.md: transistor driver, IR receiver (TSOP38238 / Adafruit 5990) to record the real
