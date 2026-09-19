@@ -46,7 +46,10 @@ then `sudo reboot`. (Bookworm's config file is `/boot/firmware/config.txt`; `/bo
 ## 3. Verify the device (read-only)
 ```
 $ ls -l /dev/lirc0                   expect  crw-rw---- 1 root video … /dev/lirc0
-$ ir-keytable                        expect  Found /sys/class/rc/rc0/ … Name: PWM IR Transmitter … Driver: pwm-ir-tx … LIRC device: /dev/lirc0
+$ cat /sys/class/rc/rc2/uevent       expect  DRV_NAME=pwm-ir-tx · DEV_NAME=PWM IR Transmitter
+                                     NOTE    bare `ir-keytable` does NOT list this device — it only
+                                             shows rc devices with an input/keymap, which a TX-only
+                                             device has none of. Not a fault. (2026-09-19)
 $ ir-ctl -d /dev/lirc0 -f            expect  "Device cannot receive" · "Device can send raw IR" · "Set carrier" (duty cycle too)
 $ pinctrl get 12                     expect  a0 pd | lo // GPIO12 = PWM0_CHAN0 — CHAN0 specifically,
                                              not just "a PWM function"; CHAN2 means the wrong pin (T11)

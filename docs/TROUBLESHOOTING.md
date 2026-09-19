@@ -167,6 +167,8 @@ recompile and maintain a local `.dtbo` that a firmware update can silently super
 
 Note `ir-ctl`'s own warning: "most lirc settings have global state." Carrier and duty cycle
 persist on the device between invocations, so set `-c 38000 -D 50` explicitly when in doubt.
+Doing so alongside a `carrier 38000` line in the file prints `warning: carrier specified but
+overwritten on command line` — harmless when both values agree; the command line wins.
 
 ## T12. Sends land only ~25–40 % of the time, at any distance
 Two separate causes bit us on 2026-09-19, in this order. Check both before blaming timing,
@@ -202,4 +204,20 @@ is indistinguishable from a miss.
 
 Reliable at the phase-1 metre; roughly half by 5 m. Exactly the envelope D5 predicted. A box that
 lives next to the TV is fine on a bare LED; anywhere else needs the driver transistor.
+
+> **This curve did NOT reproduce.** Re-measured 2026-09-19 01:05, same module, same 1 m, after a
+> reboot: **8/10, not 10/10** (volume 20 → 28, 10 × `nec:0x0402`). Emission was confirmed good
+> immediately beforehand by the T11 strobe, the pin read `PWM0_CHAN0` throughout, and all 10 sends
+> were accepted with no error — so this is link margin, not a dead path. **Treat the table above as
+> one measurement, not a characterisation.** A bare KY-005 at 1 m is evidently sitting close enough
+> to the edge that something uncontrolled (aim/angle — never characterised, cone ~±20° — or module
+> variation per T12a) moves it between 8/10 and 10/10. Re-establish 10/10 on the volume instrument
+> before trusting *any* reliability number taken at this distance, and log the angle next time.
+
+### c) Do not accept a remembered count as a result
+The 4 s-spaced M/U-per-press protocol in (b) exists so misses are individually localised. It only
+works if the letters are **written down as they happen**. On 2026-09-19 the mute half was run and
+the sequence was not recorded; "maybe 5 worked" is a recollection, not data, and it cannot be
+compared against the objective VOL row — so the run settled nothing and has to be repeated. If
+nobody is in a position to write the sequence down, don't start the run.
 

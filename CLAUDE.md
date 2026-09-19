@@ -52,8 +52,11 @@ Slash commands: `/bringup-status` (read-only health check), `/find-code <brand> 
   full diagnosis in TROUBLESHOOTING T11. Web guides all say GPIO18 — they mean the Pi 4.
 - A green `/dev/lirc0` proves nothing about emission: check `pinctrl get 12` reads
   **PWM0_CHAN0**, and confirm light with the T11 strobe before trusting any send.
-- After reboot, `ir-keytable` should list a "PWM IR Transmitter" and
-  `/dev/lirc0` should exist. If it doesn't, check `dmesg | grep -i -E "pwm|lirc|rc"`.
+- After reboot, `/dev/lirc0` should exist. Note that bare `ir-keytable` does **NOT**
+  list the transmitter — it only prints rc devices that have an input device/keymap, and a
+  TX-only device has neither. Its absence there is normal and is not a fault. Confirm the
+  driver bound with `cat /sys/class/rc/rc2/uevent` (expect `DRV_NAME=pwm-ir-tx`,
+  `DEV_NAME=PWM IR Transmitter`) or `dmesg | grep -i -E "pwm|lirc|rc"`. Verified 2026-09-19.
 - Send codes with `ir-ctl` from `v4l-utils`:
   `ir-ctl -d /dev/lirc0 -S <protocol>:<scancode>`
   Scancodes are in Linux rc-core format (`docs/IR-CODES.md` §1), NOT the 32-bit

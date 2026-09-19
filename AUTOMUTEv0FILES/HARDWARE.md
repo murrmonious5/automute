@@ -60,9 +60,11 @@ setup that isn't.
 
 ### Bench A — James
 
-*Updated 2026-09-19 00:15 by Claude. Name in the heading left as-is — correct it if wrong.*
+*Updated 2026-09-19 01:10 by Claude. Name in the heading left as-is — correct it if wrong.*
 
-**Status: IR WORKS. VOL+, VOL-, and MUTE all confirmed against the TV 2026-09-19 ~00:10.**
+**Status: overlay + pin VERIFIED THROUGH A REBOOT. IR emits. Reliability REGRESSED and
+DoD #1/#2 still NOT passed.** VOL+, VOL-, MUTE all confirmed working as codes (2026-09-19
+~00:10), but see the 01:05 session results below before assuming phase 1 is done.
 
 - Pi 5 8 GB, Raspberry Pi OS 64-bit, kernel 6.12.20+rpt-rpi-2712
 - KY-005 on **GPIO12 = physical pin 32** through a resistor — value **not recorded, write it in** —
@@ -75,9 +77,11 @@ setup that isn't.
     on 2026-09-18. No damage apparent: the pin drives normally and the LED is bright.
 - `config.txt`: `dtoverlay=pwm-ir-tx,gpio_pin=12,func=4` under `[all]`, with a comment warning
   about the pin-12/GPIO12 collision. Backups: `config.txt.automute.bak`, `…bak.0009`.
-  **Written but NOT yet rebooted into** — the working mux was set live with `pinctrl set 12 a0`.
-  First job next session: reboot, then `pinctrl get 12` must read `a0 // GPIO12 = PWM0_CHAN0`.
-  If the firmware translates `func=4` differently on the Pi 5, adjust the number until it does.
+  **REBOOTED INTO AND VERIFIED 2026-09-19 01:05.** After a real reboot (boot 01:01:51),
+  `pinctrl get 12` reads `a0 pd | lo // GPIO12 = PWM0_CHAN0` — set by the overlay this time,
+  not by a live `pinctrl set`. `pinctrl get 18` reads `none`, so the old pin is released.
+  **`func=4` does translate correctly on Pi 5 firmware** — that open question is closed, no
+  adjustment needed. The mux also survived ~50 sends unchanged.
 - `/dev/lirc0`: present, rc2 = "PWM IR Transmitter" / `pwm-ir-tx`, `ir-ctl -f` = can send raw IR,
   cannot receive. dmesg still carries "TX will not be accurate as PWM device might sleep" — the
   RP1 sleeping path, and NEC works through it fine in practice.
@@ -94,16 +98,46 @@ setup that isn't.
   **10/10 at 3 in · 10/10 at 1 m · ~5/10 at 5 m.** Reliable at the phase-1 metre, about half by
   5 m — exactly what D5 predicted. A box beside the TV is fine; anywhere else wants the
   transistor driver (docs/SHOPPING.md item 1).
-- **Still open — DoD #1/#2 NOT passed, and the reason is unresolved.** Counting mute toggles gave
-  5/20 at 1 m and 3/6 at 2 m, while VOL± from the same spot gave 10/10. Mute is a bad instrument
-  (T12b, D10), but we never ran the back-to-back that would prove it: 10 × VOL+ then 10 × MUTE
-  from an identical position, no moving in between. **That is the first test next session** — it
-  decides whether phase 1 is actually done or the emitter has a mute-specific problem.
+- **Back-to-back VOL vs MUTE — RAN 2026-09-19 01:05 at 1 m. INCONCLUSIVE, and here is why.**
+  Identical position, nothing moved between the two runs, all 20 sends accepted by the driver
+  with zero send errors and the pin still on PWM0_CHAN0 afterward.
+
+  | Run | Instrument | Result |
+  |-----|-----------|--------|
+  | 10 × `nec:0x0402` VOL+ | volume delta 20 → 28 (objective) | **8/10** |
+  | 10 × `nec:0x0409` MUTE | observed by eye, sequence NOT recorded | **~5/10 (soft)** |
+
+  **The control moved.** Last session the same module at the same 1 m gave **10/10** on VOL+;
+  tonight it gave 8/10. That is the headline finding. The back-to-back was designed to hold VOL
+  at 10/10 so any MUTE shortfall would be mute-specific — with the control itself down to 8/10,
+  ~5/10 on mute is consistent with plain link-margin loss and **does not confirm or clear a
+  mute-specific fault**. The original question is still open.
+  - The MUTE half was run as 10 presses 4 s apart with the state (M/U) to be written down after
+    each, so misses would be individually localised (fixes T12b's ambiguity). **The sequence was
+    not actually recorded** — the result is a recollection of "maybe 5", not data. Re-run it and
+    write the letters down; without them this row stays soft.
+  - Untested causes for the VOL+ regression, cheapest first: **aim/angle** (never characterised,
+    cone is ~±20°, and the rig was repositioned since the 10/10 run), then **module degradation
+    or the bad KY-005 having been swapped back in by mistake** (T12a — label the good one),
+    then ambient IR.
+- **Emission itself is not in doubt.** T11 strobe at 01:05: 27 bursts, 0 failures, clear purple
+  blinking on the phone camera. The modulated path genuinely works — this is a margin problem,
+  not a repeat of the dark-LED T11 failure.
+- **DoD status: #3 passes (0.102 s). #4 passes (strobe visible). #1 and #2 NOT passed** — 8/10
+  on the objective instrument is below the ≥18/20 bar, before mute is even considered.
 - Angle was never characterised, only distance. The cone is ~±20°; worth one sweep.
 
-Next session, in order: reboot → `pinctrl get 12` must read `a0 // GPIO12 = PWM0_CHAN0` (adjust
-`func=` if the Pi 5 firmware translates it differently) → strobe check (T11) → VOL+ sanity →
-the back-to-back VOL vs MUTE test above → 20 runs of `mute.py`, need ≥ 18 → results log.
+Next session, in order — the reboot/pin/strobe steps are all DONE and need not be repeated
+unless `config.txt` changes:
+1. **Chase the VOL+ regression (8/10 at 1 m, was 10/10).** It gates everything else; there is no
+   point counting mute until the objective instrument is back at 10/10.
+   a. Confirm which KY-005 is fitted — the good one, or the faulty one from T12a. Label them.
+   b. One angle sweep at 1 m (0°, ±10°, ±20°) with the volume instrument. Aim was never
+      characterised and the rig moved since the 10/10 run; this is the cheapest suspect.
+2. Once VOL+ is back to 10/10 at 1 m, re-run the back-to-back — **and write the M/U sequence
+   down this time**, 10 letters, one per press.
+3. Only then: 20 runs of `mute.py`, need ≥ 18 (DoD #2).
+4. Results log.
 
 ### Bench B — (buddy)
 
