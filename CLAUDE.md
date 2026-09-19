@@ -31,6 +31,9 @@ Slash commands: `/bringup-status` (read-only health check), `/find-code <brand> 
 - KY-005 `-` → GND (physical pin 6)
 - Do not suggest driving the LED without a resistor.
 - Optional later upgrade for range: NPN transistor driver from 5 V. Not tonight.
+- To prove the LED optically, drive GPIO18 to steady DC (`pinctrl set 18 op dh`, then always
+  `pinctrl set 18 a3` to restore) — an actual IR send is usually invisible to a phone camera, so
+  "no flicker" is not evidence of a dead LED. Details and a blink loop: TROUBLESHOOTING T4 item 7.
 
 ## Software design (do it this way)
 - Let the Linux kernel generate the 38 kHz carrier and pulse timings via

@@ -66,6 +66,15 @@ $ for i in $(seq 10); do ir-ctl -d /dev/lirc0 -S rc5:0x1e01; sleep 0.2; done    
 pulse/space list being sent, which is worth seeing once.
 ↪ no flicker: TROUBLESHOOTING T4.
 
+**No flicker does not mean a dead LED.** This burst is often invisible to a phone camera (67 ms
+frames, one-third duty). Prove the LED with steady DC light before suspecting the wiring:
+```
+$ pinctrl set 18 op dh     # LED on solid — look now
+$ pinctrl set 18 a3        # restore the PWM function when done
+```
+Verified on bench 2026-09-18: the modulated burst showed nothing, DC-on showed bright purple on the
+same phone. Full version, including a blink loop for loose jumpers: TROUBLESHOOTING T4 item 7.
+
 ## 5. Identify the TV, pick two codes
 Ask for brand + model. `/find-code <brand> <model>` → IR-CODES.md gives a VOL+ test code and
 MUTE candidates in `ir-ctl` form. VOL+ first: it's visible, harmless and proves the TV hears us.

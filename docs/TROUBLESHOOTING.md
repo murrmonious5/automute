@@ -32,6 +32,26 @@ out and back in. Don't run `mute.py` with sudo as a workaround — a future serv
 5. Loop the send (10 × with `sleep 0.2`) so the flicker lasts seconds instead of 67 ms.
 6. dmesg "TX will not be accurate as PWM device might sleep" is a precision note, not the cause — the LED
    still lights on that path.
+7. **DC-on test — the decisive one. Do this before touching the wiring.** A real send is easy for a
+   camera to miss: a NEC frame is only ~67 ms, and inside it the LED is lit just for the on-third of
+   each 38 kHz carrier cycle, so at 30 fps it lands in one or two dim frames. Steady DC removes the
+   modulation and makes the LED unmistakable:
+   ```
+   $ pinctrl set 18 op dh     # LED on solid. ~13 mA through the 150–220 Ω resistor; fine for minutes
+   $ pinctrl get 18           # expect  18: op dh pd | hi // GPIO18 = output
+   $ pinctrl set 18 a3        # ALWAYS restore: a3 = PWM0_CHAN2, the function pwm-ir-tx needs
+   ```
+   Blinking it also exposes a marginal contact — flex the jumpers while it runs and watch for a
+   missing or dim flash:
+   ```
+   $ for i in $(seq 10); do pinctrl set 18 op dh; sleep 0.75; pinctrl set 18 op dl; sleep 0.75; done; pinctrl set 18 a3
+   ```
+   Steady purple → LED, resistor, polarity and pin number are all good, and the camera was the
+   problem, not the rig: go to BRINGUP step 6 and let the TV be the judge. Nothing on two different
+   cameras → the LED really isn't lighting; back to items 3 and 4.
+   No sudo, no reboot — this only changes the pinmux, unlike `dtoverlay -r` (T10).
+   **Don't run it alongside another background job that ends in `pinctrl set 18 a3`**: the job's
+   cleanup yanks the pin mid-test and reads as a dropped blink. Seen on this bench 2026-09-18.
 
 ## T5. LED blinks, TV ignores everything
 - **Aim**: at the TV's IR window (dark dot on the bottom bezel), ≤ 1 m, direct line of sight, LED *axis*

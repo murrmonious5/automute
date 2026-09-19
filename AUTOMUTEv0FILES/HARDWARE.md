@@ -58,25 +58,42 @@ setup that isn't.
 
 ### Bench A — James
 
-*Updated 2026-09-18 22:xx by Claude. Name in the heading left as-is — correct it if wrong.*
+*Updated 2026-09-18 23:27 by Claude. Name in the heading left as-is — correct it if wrong.*
 
 - Pi 5 8 GB, Raspberry Pi OS 64-bit, kernel 6.12.20+rpt-rpi-2712
-- KY-005 on GPIO18 through a **NO** Ω resistor — wiring: `[ ] not yet  [x] done  [ ] verified with phone camera`
-  - **DO NOT SEND IR.** Signal runs pin 12 → `S` bare, ground pin 6 → `-`. No series resistor.
-    Four NEC frames were sent in this state by accident (22:28) before it was known; GPIO18
-    should be re-checked. Get any 100 Ω–1 kΩ resistor in the signal line before any further send.
+- KY-005 on GPIO18 through a resistor — value **not recorded, write it in here** —
+  wiring: `[ ] not yet  [x] done  [x] verified with phone camera`
+  - Resistor confirmed in the signal line 2026-09-18 ~23:10, before any of that evening's sends.
+    It was previously a bare wire and four NEC frames went out in that state at 22:28. Since the
+    resistor went in, GPIO18 reads back its PWM function normally, the LED lights, and the TV
+    responds — no damage apparent.
+  - Pin 12 → resistor → `S`; pin 6 → `-`; middle pin empty (it is not connected to the LED, and it
+    is not a receiver — this build has no receiver at all).
 - `config.txt` overlay added: `[ ] no  [ ] yes, not rebooted  [x] yes, rebooted`
   - Line is `dtoverlay=pwm-ir-tx,gpio_pin=18` under `[all]`. Replaced a stale
-    `dtoverlay=gpio-ir-tx,gpio_pin=15` (wrong driver AND wrong pin — GPIO15 is physical pin 10,
-    adjacent to pin 12, so check the wire is really on 12). Backup: `config.txt.automute.bak`.
-- `/dev/lirc0` present: `[ ] no  [x] yes` — verified live as `pwm-ir-tx` / "PWM IR Transmitter",
-  `pinctrl get 18` = `PWM0_CHAN2`, send exit 0 in 69 ms, `python3 mute.py` in 99 ms (DoD #3 pass).
-  **Was wedged by `dtoverlay -r` (TROUBLESHOOTING T10) — a reboot is required to restore it.**
-- TV brand/model: **LG 65UQ7570PUJ** (see `tv_details.md`); IR window bottom-centre near the logo
-- Working mute code: **`nec:0x0409` — UNVERIFIED against the TV.** VOL+ test code `nec:0x0402`.
+    `dtoverlay=gpio-ir-tx,gpio_pin=15` (wrong driver AND wrong pin). Backup: `config.txt.automute.bak`.
+- `/dev/lirc0` present: `[ ] no  [x] yes` — the reboot cleared the T10 wedge and it came back clean.
+  Verified 2026-09-18 23:10: rc2 = "PWM IR Transmitter" / `pwm-ir-tx`, `pinctrl get 18` =
+  `a3 // PWM0_CHAN2`, `ir-ctl -f` = can send raw IR + scancode encoder + set carrier, cannot receive.
+  ~500 frames sent across the evening's test bursts, exit 0 on every one.
+  dmesg still shows "TX will not be accurate as PWM device might sleep" — the RP1 sleeping path.
+  NEC decodes fine through it in practice (TROUBLESHOOTING T6).
+- LED verified by eye: **yes** — phone camera, DC-on test (TROUBLESHOOTING T4 item 7), bright purple,
+  and a 10-cycle blink came through clean. The modulated IR bursts were invisible on the same camera,
+  which cost us a round of debugging: treat "no flicker on a send" as meaningless, not as a fault.
+- TV brand/model: **LG 65UQ7570PUJ** (see `tv_details.md`); IR window bottom-centre of the bezel,
+  under the LG logo.
+- **VOL+ `nec:0x0402` confirmed working against the TV**, 2026-09-18 ~23:15 — so the LG NEC device-4
+  code set is correct for this TV. VOL− is `nec:0x0403`; range sweeps were sent as +/− pairs in even
+  numbers so the volume ends where it started.
+- Working mute code: `nec:0x0409` — **not yet sent at the TV.** Same protocol and address as the VOL+
+  that works, so it should land, but it is unproven until someone watches the mute icon appear.
+- Range envelope: **not measured.** Record the distance and angle where the TV stops responding next
+  session — that number decides whether phase 2 needs the transistor driver (NOTES.md).
 
-Next step when picking this up: reboot done? → verify `/dev/lirc0` + `pinctrl get 18`, then
-BRINGUP step 4 (phone-camera burst) **only once a resistor is fitted**.
+Next step when picking this up: BRINGUP step 7 — one MUTE press from a spot where VOL+ answers
+(never twice "to be sure"; it is a toggle), then step 9's 20 runs at ≥ 18/20, and fill in the
+results log at the bottom of BRINGUP.md.
 
 ### Bench B — (buddy)
 
