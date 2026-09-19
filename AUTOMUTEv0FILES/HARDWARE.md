@@ -13,8 +13,10 @@
 ## Wiring
 
 ```
-Pi GPIO18 (physical pin 12) ──[ 150–220 Ω ]── KY-005  S
+Pi GPIO12 (PHYSICAL PIN 32) ──[ 150–220 Ω ]── KY-005  S
 Pi GND    (physical pin 6)  ─────────────────  KY-005  -
+
+!! GPIO12 is physical pin 32. Physical pin 12 is GPIO18 and does NOT work here (T11/D9).
 ```
 
 Notes an agent should not talk anyone out of:
@@ -42,7 +44,7 @@ non-realtime kernel is far looser than the ~±10 µs that IR protocols want.
 Overlay line in `/boot/firmware/config.txt`:
 
 ```
-dtoverlay=pwm-ir-tx,gpio_pin=18
+dtoverlay=pwm-ir-tx,gpio_pin=12,func=4
 ```
 
 Requires sudo to edit and a reboot to take effect. **Ask the human first and

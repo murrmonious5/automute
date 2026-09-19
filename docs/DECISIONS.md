@@ -13,8 +13,9 @@ Revisit when: never, for IR.
 Context: `gpio-ir-tx` bit-bangs the carrier from a kernel thread; users report it failing outright on
 newer boards and it burns CPU. `pwm-ir-tx` lets hardware PWM make the carrier and only gates it; since
 Linux 6.8 it drives edges from an hrtimer (backported to Raspberry Pi's 6.6 kernels).
-Decision: `dtoverlay=pwm-ir-tx,gpio_pin=18`.
-Consequences: ties us to a PWM-capable pin (GPIO18). Open question on Pi 5: whether the RP1 PWM driver
+Decision: `dtoverlay=pwm-ir-tx,gpio_pin=12,func=4` (GPIO12 = physical pin 32; see D9 — GPIO18
+looks right and silently does not work on a Pi 5).
+Consequences: ties us to a PWM-capable pin on PWM channel 0, which on the Pi 5 means GPIO12. Open question on Pi 5: whether the RP1 PWM driver
 can be used from atomic context; dmesg says ("TX will not be accurate as PWM device might sleep" = the
 driver fell back to its sleeping path). NEC-family protocols are tolerant either way.
 Revisit when: sends are flaky with good aim — check kernel version and dmesg before anything else.

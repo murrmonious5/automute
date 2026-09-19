@@ -20,8 +20,9 @@ lsmod | grep -E "pwm_ir_tx|rc_core"
 Causes, in order of likelihood:
 
 - **Line added but not rebooted.** Device tree overlays only apply at boot.
-- **Typo in the overlay line.** It's `dtoverlay=pwm-ir-tx,gpio_pin=18` —
-  comma between overlay and parameter, no spaces.
+- **Typo in the overlay line.** It's `dtoverlay=pwm-ir-tx,gpio_pin=12,func=4` —
+  comma between overlay and parameter, no spaces. NOT gpio_pin=18: that muxes GPIO18 to PWM
+  channel 2 while the driver drives channel 0, and nothing is emitted (see docs/TROUBLESHOOTING T11).
 - **Edited the wrong file.** On Raspberry Pi OS Bookworm it's
   `/boot/firmware/config.txt`. `/boot/config.txt` is the old path and may exist
   as a stale leftover that nothing reads.

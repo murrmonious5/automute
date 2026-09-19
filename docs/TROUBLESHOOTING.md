@@ -4,7 +4,8 @@ Work top-down: each section assumes the ones above it pass. Anything with `sudo`
 `/bringup-status` gathers most of the evidence below in one go.
 
 ## T1. No `/dev/lirc0` after the reboot
-- `grep -n ir-tx /boot/firmware/config.txt` → line present, spelled exactly `dtoverlay=pwm-ir-tx,gpio_pin=18`,
+- `grep -n ir-tx /boot/firmware/config.txt` → line present, spelled exactly
+  `dtoverlay=pwm-ir-tx,gpio_pin=12,func=4` (**not** `gpio_pin=18` — T11),
   and in the `[all]` section (not under `[pi4]`, `[cm4]`, `[cm5]`)? Edited `/boot/firmware/config.txt`,
   not `/boot/config.txt`?
 - `ls /boot/firmware/overlays/ | grep ir-tx` → `pwm-ir-tx.dtbo` present?
