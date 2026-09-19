@@ -26,17 +26,21 @@ $ ir-ctl --version
 `v4l-utils` ships `ir-ctl`; `ir-keytable` is a separate Debian package.
 
 ## 2. Enable the transmitter **(sudo, then reboot)**
-First make sure nothing else claims GPIO18 or an IR overlay:
+First make sure nothing else claims GPIO12 or an IR overlay:
 ```
 $ grep -n -E '^dtoverlay=(pwm|gpio)-ir|^dtoverlay=pwm|^dtoverlay=i2s' /boot/firmware/config.txt
 ```
 **expect** no output. Then append to the very END of `/boot/firmware/config.txt` — after the
 `[all]` line, never under `[pi4]` / `[cm4]` / `[cm5]`:
 ```
-# AutoMute: kernel IR transmitter on GPIO18 (physical pin 12)
-dtoverlay=pwm-ir-tx,gpio_pin=18
+# AutoMute: kernel IR transmitter on GPIO12 = PHYSICAL PIN 32 (not pin 12!)
+dtoverlay=pwm-ir-tx,gpio_pin=12,func=4
 ```
-e.g. `printf '\n# AutoMute: kernel IR transmitter on GPIO18 (physical pin 12)\ndtoverlay=pwm-ir-tx,gpio_pin=18\n' | sudo tee -a /boot/firmware/config.txt`
+**Use GPIO12, not the GPIO18 every web guide gives you.** `pwm-ir-tx` hardcodes PWM channel 0;
+on the Pi 5's RP1 that is GPIO12. With `gpio_pin=18` the pin muxes to channel 2, the driver keeps
+driving channel 0, and every send succeeds while emitting nothing. This is TROUBLESHOOTING T11 and
+it is the single most expensive trap in this build.
+e.g. `printf '\n# AutoMute: kernel IR transmitter on GPIO12 (physical pin 32)\ndtoverlay=pwm-ir-tx,gpio_pin=12,func=4\n' | sudo tee -a /boot/firmware/config.txt`
 then `sudo reboot`. (Bookworm's config file is `/boot/firmware/config.txt`; `/boot/config.txt` is a decoy.)
 
 ## 3. Verify the device (read-only)
@@ -44,7 +48,8 @@ then `sudo reboot`. (Bookworm's config file is `/boot/firmware/config.txt`; `/bo
 $ ls -l /dev/lirc0                   expect  crw-rw---- 1 root video … /dev/lirc0
 $ ir-keytable                        expect  Found /sys/class/rc/rc0/ … Name: PWM IR Transmitter … Driver: pwm-ir-tx … LIRC device: /dev/lirc0
 $ ir-ctl -d /dev/lirc0 -f            expect  "Device cannot receive" · "Device can send raw IR" · "Set carrier" (duty cycle too)
-$ pinctrl get 18                     expect  a PWM function on GPIO18 (e.g. PWM0_CHAN2), not "no" / "ip" / "op"
+$ pinctrl get 12                     expect  a0 pd | lo // GPIO12 = PWM0_CHAN0 — CHAN0 specifically,
+                                             not just "a PWM function"; CHAN2 means the wrong pin (T11)
 $ dmesg | grep -i -E 'pwm-ir|lirc|rc rc'      (if refused: sudo dmesg … — ask first)
 ```
 Two acceptable dmesg outcomes:
@@ -109,3 +114,5 @@ Log the result below and commit.
 ## Results log
 | date | TV (brand/model) | code | frames | 20-run score | `real` time | notes |
 |------|------------------|------|--------|--------------|-------------|-------|
+| 2026-09-19 | LG 65UQ7570PUJ | `nec:0x0409` | 1 | not yet run | 0.102 s | First contact after moving the LED from GPIO18 (pin 12) to GPIO12 (pin 32) — T11. VOL+/VOL−/MUTE all confirmed at 20–30 cm, single MUTE press showed the icon. 20-run score and range envelope still to do. |
+

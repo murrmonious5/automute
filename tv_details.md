@@ -14,6 +14,10 @@
 ## IR codes (LG NEC, device 0x04)
 All sent once per press. Mute is a toggle.
 
+**Verified against the actual TV 2026-09-19 ~00:10** — VOL+, VOL− and MUTE all confirmed at
+20–30 cm with the emitter on GPIO12 (physical pin 32). These codes were correct from the first
+attempt; hours of apparent "wrong code" symptoms were a dead transmitter (TROUBLESHOOTING T11).
+
 | Key   | rc-core (ir-ctl) | 32-bit hex (web/Arduino) |
 |-------|------------------|--------------------------|
 | Mute  | nec:0x0409       | 0x20DF906F               |
@@ -24,7 +28,7 @@ All sent once per press. Mute is a toggle.
 Conversion: the 32-bit form is LSB-first. Bit-reverse byte 1 for the address
 (0x20 -> 0x04) and byte 3 for the command (0x90 -> 0x09).
 
-## Test commands (on the Pi, after pwm-ir-tx is enabled)
+## Test commands (on the Pi, after pwm-ir-tx is enabled on GPIO12 / physical pin 32)
     ir-ctl -d /dev/lirc0 -S nec:0x0402   # vol up, test this first
     ir-ctl -d /dev/lirc0 -S nec:0x0409   # mute
 

@@ -98,3 +98,72 @@ Only a reboot clears it. The rest of the system is unaffected.
 
 Adding the overlay at runtime is fine; only removal is broken. To change `gpio_pin=`, edit
 `/boot/firmware/config.txt` and reboot rather than reloading live.
+
+## T11. Everything says OK, `ir-ctl` exits 0, but the LED never emits (Pi 5)
+**This one cost us an entire evening. Read it before debugging anything else on a Pi 5.**
+
+Symptom: `/dev/lirc0` present, `ir-keytable` happy, `ir-ctl -f` says "can send raw IR",
+`pinctrl get 18` shows `PWM0_CHAN2`, every send returns exit 0 — and the LED emits nothing.
+DC light works (`pinctrl set 18 op dh` → bright purple on a phone camera), so the LED, the
+resistor and the wiring are all fine. Only the modulated path is dead.
+
+Cause: **`pwm-ir-tx` hardcodes PWM channel 0, and the overlay has no parameter to change it.**
+```
+$ dtc -I dtb -O dts /boot/firmware/overlays/pwm-ir-tx.dtbo | grep -A3 pwm-ir-transmitter
+    pwms = <0xffffffff 0x00 0x64 0x00>;      # <&pwm CHANNEL=0 period=100 flags=0>
+$ grep -A8 "^Name:   pwm-ir-tx" /boot/firmware/overlays/README
+    Legal pin,function combinations are:  12,4(Alt0) 18,2(Alt5) 40,4(Alt0) 52,5(Alt1)
+    Params: gpio_pin, func                   # no channel parameter
+```
+On a Pi 4, GPIO18 *is* PWM channel 0, so `gpio_pin=18` works and every guide on the web says
+to use it. On the Pi 5 the RP1 maps the channels differently:
+
+| GPIO | physical pin | RP1 PWM channel |
+|------|--------------|-----------------|
+| 12   | **32**       | PWM0_CHAN0 ← what the driver drives |
+| 13   | 33           | PWM0_CHAN1 |
+| 18   | 12           | PWM0_CHAN2 |
+| 19   | 35           | PWM0_CHAN3 |
+
+So `gpio_pin=18` on a Pi 5 muxes GPIO18 to **channel 2** while the driver keeps transmitting on
+**channel 0**. Pin and driver are on different channels; nothing is wrong enough to raise an
+error anywhere, and every layer reports success into a pin nobody is driving.
+
+Fix: **use GPIO12 (physical pin 32), not GPIO18.**
+```
+dtoverlay=pwm-ir-tx,gpio_pin=12,func=4      # /boot/firmware/config.txt, then reboot
+```
+Move the resistor'd signal wire from physical pin 12 to physical pin 32. GND stays on pin 6.
+Mind the naming collision: **GPIO12 is physical pin 32; physical pin 12 is GPIO18.**
+
+Keeping GPIO18 is possible but not worth it: decompile the overlay, change the channel to 2,
+recompile and maintain a local `.dtbo` that a firmware update can silently supersede.
+
+### How to prove which layer is broken, without any extra hardware
+1. **DC light** — `pinctrl set 18 op dh` … `pinctrl set 18 a3`. Tests LED + resistor + wiring only.
+2. **Carrier on a chosen channel** — bypasses the driver, tests pin ↔ channel mapping:
+   ```
+   $ C=/sys/class/pwm/pwmchip0; echo 2 > $C/export; sleep 1     # udev needs a moment for group perms
+   $ echo 26315 > $C/pwm2/period; echo 13157 > $C/pwm2/duty_cycle   # 38 kHz, 50 %
+   $ echo 1 > $C/pwm2/enable      # camera: steady purple, ~half DC brightness
+   $ echo 0 > $C/pwm2/enable; echo 2 > $C/unexport
+   ```
+   No sudo needed — the `gpio` group owns the exported channel.
+3. **Live re-mux, no reboot** — `pinctrl set 12 a0` points GPIO12 at PWM0_CHAN0 so the real
+   driver path can be tested before committing to `config.txt`. `pinctrl funcs <n>` lists the
+   alt functions; count from the entry *after* the plain-GPIO one (`a0` is the second item).
+4. **A camera-visible strobe** — an IR frame is too brief and too low-duty for a phone camera, so
+   "no flicker" proves nothing (T4). This does:
+   ```
+   $ printf 'carrier 38000\n' > strobe.txt
+   $ for i in $(seq 15); do printf 'pulse 20000\nspace 10000\n' >> strobe.txt; done
+   $ sed -i '$ d' strobe.txt          # must end on a pulse
+   $ while :; do ir-ctl -d /dev/lirc0 -D 50 -s strobe.txt; sleep 0.1; done
+   ```
+   Driver limit: bursts over ~500 ms are rejected with `failed to send: Invalid argument`
+   (15 pulse/space pairs OK, 20 fails). Files must end with a pulse, not a space.
+   `duty_cycle` is not a valid keyword inside the file — use `-D`.
+
+Note `ir-ctl`'s own warning: "most lirc settings have global state." Carrier and duty cycle
+persist on the device between invocations, so set `-c 38000 -D 50` explicitly when in doubt.
+

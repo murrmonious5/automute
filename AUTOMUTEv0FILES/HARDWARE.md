@@ -58,42 +58,38 @@ setup that isn't.
 
 ### Bench A — James
 
-*Updated 2026-09-18 23:27 by Claude. Name in the heading left as-is — correct it if wrong.*
+*Updated 2026-09-19 00:15 by Claude. Name in the heading left as-is — correct it if wrong.*
+
+**Status: IR WORKS. VOL+, VOL-, and MUTE all confirmed against the TV 2026-09-19 ~00:10.**
 
 - Pi 5 8 GB, Raspberry Pi OS 64-bit, kernel 6.12.20+rpt-rpi-2712
-- KY-005 on GPIO18 through a resistor — value **not recorded, write it in here** —
-  wiring: `[ ] not yet  [x] done  [x] verified with phone camera`
-  - Resistor confirmed in the signal line 2026-09-18 ~23:10, before any of that evening's sends.
-    It was previously a bare wire and four NEC frames went out in that state at 22:28. Since the
-    resistor went in, GPIO18 reads back its PWM function normally, the LED lights, and the TV
-    responds — no damage apparent.
-  - Pin 12 → resistor → `S`; pin 6 → `-`; middle pin empty (it is not connected to the LED, and it
-    is not a receiver — this build has no receiver at all).
-- `config.txt` overlay added: `[ ] no  [ ] yes, not rebooted  [x] yes, rebooted`
-  - Line is `dtoverlay=pwm-ir-tx,gpio_pin=18` under `[all]`. Replaced a stale
-    `dtoverlay=gpio-ir-tx,gpio_pin=15` (wrong driver AND wrong pin). Backup: `config.txt.automute.bak`.
-- `/dev/lirc0` present: `[ ] no  [x] yes` — the reboot cleared the T10 wedge and it came back clean.
-  Verified 2026-09-18 23:10: rc2 = "PWM IR Transmitter" / `pwm-ir-tx`, `pinctrl get 18` =
-  `a3 // PWM0_CHAN2`, `ir-ctl -f` = can send raw IR + scancode encoder + set carrier, cannot receive.
-  ~500 frames sent across the evening's test bursts, exit 0 on every one.
-  dmesg still shows "TX will not be accurate as PWM device might sleep" — the RP1 sleeping path.
-  NEC decodes fine through it in practice (TROUBLESHOOTING T6).
-- LED verified by eye: **yes** — phone camera, DC-on test (TROUBLESHOOTING T4 item 7), bright purple,
-  and a 10-cycle blink came through clean. The modulated IR bursts were invisible on the same camera,
-  which cost us a round of debugging: treat "no flicker on a send" as meaningless, not as a fault.
-- TV brand/model: **LG 65UQ7570PUJ** (see `tv_details.md`); IR window bottom-centre of the bezel,
-  under the LG logo.
-- **VOL+ `nec:0x0402` confirmed working against the TV**, 2026-09-18 ~23:15 — so the LG NEC device-4
-  code set is correct for this TV. VOL− is `nec:0x0403`; range sweeps were sent as +/− pairs in even
-  numbers so the volume ends where it started.
-- Working mute code: `nec:0x0409` — **not yet sent at the TV.** Same protocol and address as the VOL+
-  that works, so it should land, but it is unproven until someone watches the mute icon appear.
-- Range envelope: **not measured.** Record the distance and angle where the TV stops responding next
-  session — that number decides whether phase 2 needs the transistor driver (NOTES.md).
+- KY-005 on **GPIO12 = physical pin 32** through a resistor — value **not recorded, write it in** —
+  wiring: `[x] done  [x] verified with phone camera`
+  - Moved from physical pin 12 (GPIO18) to physical pin 32 (GPIO12) on 2026-09-19 ~00:05. That
+    move is what made the transmitter work — see TROUBLESHOOTING T11 and DECISIONS D9.
+  - Pin 32 → resistor → `S`; pin 6 (GND) → `-`; middle pin empty (not connected to the LED, and
+    not a receiver — this build has no receiver).
+  - Earlier state was a bare wire with no resistor; four NEC frames went out that way at 22:28
+    on 2026-09-18. No damage apparent: the pin drives normally and the LED is bright.
+- `config.txt`: `dtoverlay=pwm-ir-tx,gpio_pin=12,func=4` under `[all]`, with a comment warning
+  about the pin-12/GPIO12 collision. Backups: `config.txt.automute.bak`, `…bak.0009`.
+  **Written but NOT yet rebooted into** — the working mux was set live with `pinctrl set 12 a0`.
+  First job next session: reboot, then `pinctrl get 12` must read `a0 // GPIO12 = PWM0_CHAN0`.
+  If the firmware translates `func=4` differently on the Pi 5, adjust the number until it does.
+- `/dev/lirc0`: present, rc2 = "PWM IR Transmitter" / `pwm-ir-tx`, `ir-ctl -f` = can send raw IR,
+  cannot receive. dmesg still carries "TX will not be accurate as PWM device might sleep" — the
+  RP1 sleeping path, and NEC works through it fine in practice.
+- TV: **LG 65UQ7570PUJ**, IR window bottom-centre of the bezel under the logo.
+- **Codes confirmed working (2026-09-19, ~20–30 cm, straight on):**
+  `nec:0x0402` VOL+ · `nec:0x0403` VOL− · `nec:0x0409` MUTE (single press, mute icon shown).
+  The published LG NEC device-4 table was right from the start; the emitter was the problem.
+- `python3 mute.py`: 0.102 s (`real`, second run) — definition of done #3 passes.
+- **Still open:** the 20-run score (DoD #1/#2) has not been run on the working setup, and the
+  range envelope — the distance and angle where the TV stops responding — is still unmeasured.
+  That number decides whether phase 2 needs the transistor driver (NOTES.md).
 
-Next step when picking this up: BRINGUP step 7 — one MUTE press from a spot where VOL+ answers
-(never twice "to be sure"; it is a toggle), then step 9's 20 runs at ≥ 18/20, and fill in the
-results log at the bottom of BRINGUP.md.
+Next session, in order: reboot → `pinctrl get 12` = PWM0_CHAN0 → strobe check (T11) → VOL+ →
+20 runs of `mute.py` at 3 s gaps, need ≥ 18 → fill in the results log in BRINGUP.md → measure range.
 
 ### Bench B — (buddy)
 

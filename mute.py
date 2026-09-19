@@ -4,6 +4,10 @@
 Usage: python3 mute.py
 The kernel (rc-core + pwm-ir-tx) generates the 38 kHz carrier and the pulse timing;
 this file only tells it which key to send. Codes: docs/IR-CODES.md.
+
+Hardware: the LED must be on GPIO12 = physical pin 32 (pwm-ir-tx only drives PWM channel 0,
+which is GPIO12 on the Pi 5's RP1 — not GPIO18). If sends exit 0 but nothing happens, that
+is the first thing to check: TROUBLESHOOTING T11.
 """
 import subprocess
 

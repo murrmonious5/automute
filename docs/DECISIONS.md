@@ -55,3 +55,17 @@ Revisit when: phase 5/6.
 ## D8 — Phase gating
 Decision: nothing beyond phase 1 gets built tonight. Ideas go to NOTES.md via `/park`.
 Revisit when: the definition of done is met and committed.
+
+## D9 — GPIO12 (physical pin 32), not GPIO18, for the IR LED on a Pi 5
+Context: `pwm-ir-tx`'s device tree hardcodes `pwms = <&pwm 0 100 0>` — PWM channel 0 — and exposes
+only `gpio_pin` and `func` as parameters. On a Pi 4, GPIO18 is channel 0. On the Pi 5's RP1,
+GPIO12 is channel 0 and GPIO18 is channel 2.
+Decision: wire the LED to GPIO12 / physical pin 32 and load
+`dtoverlay=pwm-ir-tx,gpio_pin=12,func=4`.
+Consequences: we diverge from every web guide, which assumes Pi 4 and says GPIO18. The failure
+mode when you follow them is silent: `/dev/lirc0` appears, `pinctrl` shows a PWM function,
+`ir-ctl` exits 0, and nothing is emitted. Cost us an evening (TROUBLESHOOTING T11).
+Rejected alternative: patch the overlay to channel 2 and keep GPIO18 — a local `.dtbo` to compile
+and maintain, which a firmware update can supersede without warning. One jumper is cheaper.
+Revisit when: the pin is needed for something else, or an upstream overlay gains a channel param.
+

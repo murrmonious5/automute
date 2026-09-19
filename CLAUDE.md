@@ -27,21 +27,29 @@ Slash commands: `/bringup-status` (read-only health check), `/find-code <brand> 
   code cannot be recorded; it must be looked up by TV brand.
 
 ## Wiring (already done or being done by hand)
-- GPIO18 (physical pin 12) → 150–220 Ω resistor → KY-005 `S`
+- **GPIO12 = PHYSICAL PIN 32** → 150–220 Ω resistor → KY-005 `S`
+  (NOT physical pin 12, which is GPIO18 — that pin cannot work with this driver, see below)
 - KY-005 `-` → GND (physical pin 6)
 - Do not suggest driving the LED without a resistor.
 - Optional later upgrade for range: NPN transistor driver from 5 V. Not tonight.
-- To prove the LED optically, drive GPIO18 to steady DC (`pinctrl set 18 op dh`, then always
-  `pinctrl set 18 a3` to restore) — an actual IR send is usually invisible to a phone camera, so
+- To prove the LED optically, drive the pin to steady DC (`pinctrl set 12 op dh`, then always
+  `pinctrl set 12 a0` to restore) — an actual IR send is usually invisible to a phone camera, so
   "no flicker" is not evidence of a dead LED. Details and a blink loop: TROUBLESHOOTING T4 item 7.
 
 ## Software design (do it this way)
 - Let the Linux kernel generate the 38 kHz carrier and pulse timings via
   rc-core. Python must NOT bit-bang GPIO for IR; user-space timing is too loose.
-- Enable the transmitter with `dtoverlay=pwm-ir-tx,gpio_pin=18` in
+- Enable the transmitter with `dtoverlay=pwm-ir-tx,gpio_pin=12,func=4` in
   `/boot/firmware/config.txt` (needs sudo, then reboot). Use `pwm-ir-tx`,
   not `gpio-ir-tx`, on the Pi 5 — the bit-banged driver has timing problems
-  through the RP1 I/O chip. GPIO18 is a hardware PWM pin.
+  through the RP1 I/O chip.
+- **GPIO12, never GPIO18, on a Pi 5.** `pwm-ir-tx` hardcodes PWM channel 0 and has no
+  parameter to change it. On the RP1, channel 0 is GPIO12; GPIO18 is channel 2. With
+  `gpio_pin=18` the pin muxes correctly, the driver transmits on a different channel,
+  every layer reports success and the LED stays dark. Verified on this bench 2026-09-19;
+  full diagnosis in TROUBLESHOOTING T11. Web guides all say GPIO18 — they mean the Pi 4.
+- A green `/dev/lirc0` proves nothing about emission: check `pinctrl get 12` reads
+  **PWM0_CHAN0**, and confirm light with the T11 strobe before trusting any send.
 - After reboot, `ir-keytable` should list a "PWM IR Transmitter" and
   `/dev/lirc0` should exist. If it doesn't, check `dmesg | grep -i -E "pwm|lirc|rc"`.
 - Send codes with `ir-ctl` from `v4l-utils`:
