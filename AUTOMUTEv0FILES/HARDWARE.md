@@ -58,12 +58,25 @@ setup that isn't.
 
 ### Bench A — James
 
-- Pi 5 8 GB, Raspberry Pi OS 64-bit
-- KY-005 on GPIO18 through a ___ Ω resistor — wiring: `[ ] not yet  [ ] done  [ ] verified with phone camera`
-- `config.txt` overlay added: `[ ] no  [ ] yes, not rebooted  [ ] yes, rebooted`
-- `/dev/lirc0` present: `[ ] no  [ ] yes`
-- TV brand/model: **TBD**
-- Working mute code: **TBD** (record it in `IR_CODES.md` once it fires)
+*Updated 2026-09-18 22:xx by Claude. Name in the heading left as-is — correct it if wrong.*
+
+- Pi 5 8 GB, Raspberry Pi OS 64-bit, kernel 6.12.20+rpt-rpi-2712
+- KY-005 on GPIO18 through a **NO** Ω resistor — wiring: `[ ] not yet  [x] done  [ ] verified with phone camera`
+  - **DO NOT SEND IR.** Signal runs pin 12 → `S` bare, ground pin 6 → `-`. No series resistor.
+    Four NEC frames were sent in this state by accident (22:28) before it was known; GPIO18
+    should be re-checked. Get any 100 Ω–1 kΩ resistor in the signal line before any further send.
+- `config.txt` overlay added: `[ ] no  [ ] yes, not rebooted  [x] yes, rebooted`
+  - Line is `dtoverlay=pwm-ir-tx,gpio_pin=18` under `[all]`. Replaced a stale
+    `dtoverlay=gpio-ir-tx,gpio_pin=15` (wrong driver AND wrong pin — GPIO15 is physical pin 10,
+    adjacent to pin 12, so check the wire is really on 12). Backup: `config.txt.automute.bak`.
+- `/dev/lirc0` present: `[ ] no  [x] yes` — verified live as `pwm-ir-tx` / "PWM IR Transmitter",
+  `pinctrl get 18` = `PWM0_CHAN2`, send exit 0 in 69 ms, `python3 mute.py` in 99 ms (DoD #3 pass).
+  **Was wedged by `dtoverlay -r` (TROUBLESHOOTING T10) — a reboot is required to restore it.**
+- TV brand/model: **LG 65UQ7570PUJ** (see `tv_details.md`); IR window bottom-centre near the logo
+- Working mute code: **`nec:0x0409` — UNVERIFIED against the TV.** VOL+ test code `nec:0x0402`.
+
+Next step when picking this up: reboot done? → verify `/dev/lirc0` + `pinctrl get 18`, then
+BRINGUP step 4 (phone-camera burst) **only once a resistor is fitted**.
 
 ### Bench B — (buddy)
 
