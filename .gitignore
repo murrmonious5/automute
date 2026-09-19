@@ -1,0 +1,24 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+env/
+
+# Per-machine notes an agent may generate; keep bench state in HARDWARE.md instead
+*.local.md
+CLAUDE.local.md
+
+# Secrets (phase 3, Claude API key)
+.env
+*.key
+
+# Camera captures / test frames (phase 2) — do not commit video or stills
+captures/
+frames/
+*.h264
+*.mp4
+
+# Bench scratch
+*.log
+scratch/
